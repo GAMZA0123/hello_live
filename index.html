@@ -1,81 +1,46 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>자동 연동 알림 위젯</title>
-<style>
-    body { margin: 0; overflow: hidden; font-family: 'Pretendard', sans-serif; background: transparent; }
-    #alert-container { position: absolute; top: 60px; left: 40px; display: flex; flex-direction: column; gap: 15px; }
-    
-    .alert-box {
-        display: flex; align-items: center; width: 480px; height: 110px; padding: 10px 25px 10px 15px;
-        box-sizing: border-box; border-radius: 60px; 
-        background: rgba(30, 30, 35, 0.85); backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        background-size: cover; background-position: center; background-blend-mode: overlay; 
-        transform: translateX(-120%); opacity: 0;
-        transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-in-out;
-    }
-    .alert-box.show { transform: translateX(0); opacity: 1; }
-    
-    .logo-wrapper { width: 80px; height: 80px; border-radius: 50%; margin-right: 20px; padding: 4px; background: linear-gradient(135deg, #fff, #aaa); flex-shrink: 0; }
-    .logo-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background-color: #222; }
-    .text-container { flex: 1; display: flex; flex-direction: column; justify-content: center; color: white; }
-    .title { font-size: 15px; font-weight: 800; margin-bottom: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-    .message { font-size: 21px; font-weight: 700; text-shadow: 0 2px 5px rgba(0,0,0,0.9); word-break: keep-all; }
-</style>
+    <meta charset="UTF-8">
+    <title>알람 전용 위젯</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; font-family: 'Pretendard', sans-serif; }
+        #alert-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 500px; display: flex; flex-direction: column; gap: 10px; }
+        .alert-box {
+            background: rgba(0, 0, 0, 0.8);
+            border-left: 5px solid #00d2d3;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            animation: fadeInDown 0.5s ease-out forwards;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .alert-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #00d2d3; }
+        .alert-msg { font-size: 18px; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-
-<div id="alert-container"></div>
-
-<script>
-    // 파이썬 로봇과 통신하는 통로(웹소켓) 연결
-    function connectBot() {
-        const socket = new WebSocket('ws://localhost:8765');
-
-        socket.onopen = () => console.log("🤖 연동 로봇과 연결되었습니다!");
-        
-        socket.onclose = () => {
-            console.log("연결 끊김. 3초 후 재연결 시도...");
-            setTimeout(connectBot, 3000);
-        };
-
-        // 파이썬 로봇이 데이터를 보내면 실행되는 부분
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            spawnAlert(data.title, data.message, data.colorCode);
-        };
-    }
-
-    function spawnAlert(title, message, colorCode) {
-        const container = document.getElementById('alert-container');
-        const alertBox = document.createElement('div');
-        alertBox.className = 'alert-box';
-
-        // OBS 상호작용으로 저장해둔 커스텀 배경/로고 불러오기
-        const customBg = localStorage.getItem('customBg');
-        if (customBg) alertBox.style.backgroundImage = `url(${customBg})`;
-        const customLogo = localStorage.getItem('customLogo') || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzQ0NCIvPjwvc3ZnPg==";
-
-        alertBox.innerHTML = `
-            <div class="logo-wrapper"><img class="logo-img" src="${customLogo}" alt="logo"></div>
-            <div class="text-container">
-                <div class="title" style="color: ${colorCode}">${title}</div>
-                <div class="message">${message}</div>
-            </div>
-        `;
-
-        container.appendChild(alertBox);
-        setTimeout(() => alertBox.classList.add('show'), 50);
-        setTimeout(() => {
-            alertBox.classList.remove('show');
-            setTimeout(() => alertBox.remove(), 600);
-        }, 4500);
-    }
-
-    // 웹페이지 켜지면 로봇과 연결 시작
-    connectBot();
-</script>
+    <div id="alert-container"></div>
+    <script>
+        function connect() {
+            const socket = new WebSocket('ws://localhost:8765');
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                // 🚨 핵심: type이 'alert'인 것만 화면에 띄움
+                if (data.type === 'alert') {
+                    const container = document.getElementById('alert-container');
+                    const div = document.createElement('div');
+                    div.className = 'alert-box';
+                    div.style.borderLeftColor = data.colorCode;
+                    div.innerHTML = `<div class="alert-title" style="color:${data.colorCode}">${data.title}</div><div class="alert-msg">${data.message}</div>`;
+                    container.appendChild(div);
+                    setTimeout(() => div.remove(), 5000); // 5초 뒤 삭제
+                }
+            };
+            socket.onclose = () => setTimeout(connect, 3000);
+        }
+        connect();
+    </script>
 </body>
 </html>
