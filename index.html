@@ -2,45 +2,38 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>알람 전용 위젯</title>
+    <title>알람 위젯</title>
     <style>
         body { margin: 0; overflow: hidden; background: transparent; font-family: 'Pretendard', sans-serif; }
-        #alert-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 500px; display: flex; flex-direction: column; gap: 10px; }
+        #alert-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 550px; display: flex; flex-direction: column; gap: 12px; }
         .alert-box {
-            background: rgba(0, 0, 0, 0.8);
-            border-left: 5px solid #00d2d3;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            animation: fadeInDown 0.5s ease-out forwards;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: rgba(20, 20, 25, 0.9);
+            border-left: 6px solid #ff6b6b;
+            color: white; padding: 20px; border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            animation: slideDown 0.5s ease-out forwards;
         }
-        .alert-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #00d2d3; }
-        .alert-msg { font-size: 18px; }
-        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .title { font-weight: 800; font-size: 15px; margin-bottom: 6px; text-transform: uppercase; }
+        .message { font-size: 20px; font-weight: 600; line-height: 1.4; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="alert-container"></div>
     <script>
-        function connect() {
-            const socket = new WebSocket('ws://localhost:8765');
-            socket.onmessage = function(e) {
-                const data = JSON.parse(e.data);
-                // 🚨 핵심: type이 'alert'인 것만 화면에 띄움
-                if (data.type === 'alert') {
-                    const container = document.getElementById('alert-container');
-                    const div = document.createElement('div');
-                    div.className = 'alert-box';
-                    div.style.borderLeftColor = data.colorCode;
-                    div.innerHTML = `<div class="alert-title" style="color:${data.colorCode}">${data.title}</div><div class="alert-msg">${data.message}</div>`;
-                    container.appendChild(div);
-                    setTimeout(() => div.remove(), 5000); // 5초 뒤 삭제
-                }
-            };
-            socket.onclose = () => setTimeout(connect, 3000);
-        }
-        connect();
+        const socket = new WebSocket('ws://localhost:8765');
+        socket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === 'alert') {
+                const container = document.getElementById('alert-container');
+                const div = document.createElement('div');
+                div.className = 'alert-box';
+                div.style.borderLeftColor = data.color;
+                div.innerHTML = `<div class="title" style="color:${data.color}">${data.title}</div><div class="message">${data.message}</div>`;
+                container.appendChild(div);
+                setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 500); }, 5000);
+            }
+        };
     </script>
 </body>
 </html>
